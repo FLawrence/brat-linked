@@ -1,0 +1,1 @@
+Extending nlplab/brat to support linked data publication
