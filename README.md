@@ -1,6 +1,8 @@
 # brat-linked
 Automatically exported from code.google.com/p/brat-linked
 
+The code related to the data visualisation and other surrounding web pages can be found at https://github.com/FLawrence/brat-linked-vis
+
 
 Useful installation notes:
 
