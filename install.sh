@@ -10,6 +10,7 @@
 
 WORK_DIR=work
 DATA_DIR=data
+USER_DB=user_data.db
 CONFIG_TEMPLATE=config_template.py
 CONFIG=config.py
 
@@ -52,20 +53,20 @@ if [ "$QUICK" = true ]; then
 else
     # not quick; ask details for config
     while true; do
-	echo 'Please the user name that you want to use when logging into brat'
+	echo 'Please enter the user name that you want to use when logging into brat:'
 	read user_name
 	if [ -n "$user_name" ]; then
 	    break
 	fi
     done
     while true; do
-	echo "Please enter a brat password (this shows on screen)"
+	echo "Please enter a brat password (this shows on screen):"
 	read password
 	if [ -n "$password" ]; then
 	    break
 	fi
     done
-    echo "Please enter the administrator contact email"
+    echo "Please enter the administrator contact email:"
     read admin_email
 fi
 
@@ -78,6 +79,7 @@ cat "$base_dir/$CONFIG_TEMPLATE" | \
     -e 's|\(ADMIN_CONTACT_EMAIL = \).*|\1'\'$admin_email\''|' \
     -e "s|\(BASE_DIR = \).*|\1dirname(__file__)|" \
     -e "s|\(DATA_DIR = \).*|\1path_join(BASE_DIR, '${DATA_DIR}')|" \
+    -e "s|\(USER_DB = \).*|\1path_join(DATA_DIR, '${USER_DB}')|" \	
     -e "s|\(WORK_DIR = \).*|\1path_join(BASE_DIR, '${WORK_DIR}')|" \
     -e '/\(USER_PASSWORD *= *{.*\)/a\
         \    '\'"$user_name"\'': '\'"$password"\'',') > "$base_dir/$CONFIG"
@@ -89,6 +91,10 @@ if [ -d $work_dir_abs ] && [ -d $data_dir_abs ]; then
 else
     mkdir -p $work_dir_abs
     mkdir -p $data_dir_abs
+	
+	# Set up initial database here and create our first (admin) user from the above info.
+	sqlite3 $DATA_DIR/$USER_DB < db_setup.sql
+	python init_user_db.py $DATA_DIR/$USER_DB $user_name $password
 
     # Try to determine Apache user and group
 

@@ -1,3 +1,5 @@
+# -*- Mode: Python; tab-width: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
 # This configuration file specifies the global setup of the brat
 # server. It is recommended that you use the installation script
 # instead of editing this file directly. To do this, run the following
@@ -32,6 +34,7 @@ ADMIN_CONTACT_EMAIL = CHANGE_ME
 BASE_DIR = CHANGE_ME
 DATA_DIR = CHANGE_ME
 WORK_DIR = CHANGE_ME
+USER_DB = CHANGE_ME
 
 # If you have installed brat as suggested in the installation
 # instructions, you can set up BASE_DIR, DATA_DIR and WORK_DIR by
@@ -42,6 +45,7 @@ WORK_DIR = CHANGE_ME
 #BASE_DIR = dirname(__file__)
 #DATA_DIR = join(BASE_DIR, 'data')
 #WORK_DIR = join(BASE_DIR, 'work')
+#USER_DB = join(DATA_DIR, 'user_data.db')
 
 # To allow editing, include at least one USERNAME:PASSWORD pair below.
 # The format is the following:
