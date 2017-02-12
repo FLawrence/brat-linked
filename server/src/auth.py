@@ -10,7 +10,6 @@ Author:     Pontus Stenetorp    <pontus is s u-tokyo ac jp>
 Version:    2011-04-21
 '''
 
-#from hashlib import sha512
 from hashlib import sha256
 from uuid import uuid1
 from os.path import dirname, join as path_join, isdir, isfile
@@ -174,11 +173,14 @@ def delete_user(user_name):
 	#
 	# The process: Find user's annotations-> rewrite annotation files without those annotations ->
 	# delete user records from "who touched what" table, then finally delete user account.
+	# It'll be a lot neater if/when annotations are moved into the database instead of residing in text files. 
 	#
 	try:
 		conn = connect(USER_DB)
 		curs = conn.cursor()
-		curs.execute("DELETE FROM USERS WHERE user_name=?", [user_name])
+		curs.execute("DELETE FROM users WHERE user_name=?", [user_name])
+		# Need to delete any of the user's group memberships as well. 
+		curs.execute("DELETE FROM group_memberships WHERE user_name=?", [user_name])
 		conn.commit()
 		conn.close()
 		# TODO: Pass back a return code here so the caller knows it worked?
@@ -186,7 +188,6 @@ def delete_user(user_name):
 		# See note in _is_authenticated about catching a generic Error.
 		Messager.error("Database error--contact your administrator")
 
-	
 def change_password(user_name, new_password):
 	# TODO: Check for authentication on the front end or back in here? 
 	# Need to make sure the right person is calling this. 
@@ -204,9 +205,120 @@ def change_password(user_name, new_password):
 		conn.close()
 	except Error as e:
 		# See note in _is_authenticated about catching a generic Error.
+		Messager.error("Database error--contact your administrator")		
+
+# TODO: Add "change group name" function for convenience later? It would save having to remove/re-add the group
+# and repopulate it. 
+def add_group(group_name):
+	if not user_db_exists(USER_DB):
+		# The database file is missing, or USER_DB isn't set properly. Throw up an error message and go back. 
+		Messager.error("User database not found--contact your administrator")
+		return None
+
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("INSERT INTO groups(group_name) VALUES (?)", (group_name))
+		conn.commit()
+		conn.close()
+		# All done. Hand back the password so the admin user can pass it on to the new user.
+		return password
+	except Error as e:
+		# See note in _is_authenticated about catching a generic Error.
+		Messager.error("Database error (group may already exist)--contact your administrator")
+		return None
+
+def delete_group(group_name):
+	if not user_db_exists(USER_DB):
+		# The database file is missing, or USER_DB isn't set properly. Throw up an error message and go back. 
+		Messager.error("User database not found--contact your administrator")
+		return None
+		
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("DELETE FROM groups WHERE group_name=?", [group_name])
+		# Need to delete any of the associated group memberships and permissions.
+		curs.execute("DELETE FROM group_memberships WHERE group_name=?", [group_name])
+		curs.execute("DELETE FROM doc_permissions WHERE group_name=?", [group_name])
+		conn.commit()
+		conn.close()
+		# TODO: Pass back a return code here so the caller knows it worked?
+	except Error as e:
+		# See note in _is_authenticated about catching a generic Error.
+		Messager.error("Database error--contact your administrator")
+		
+def add_user_to_group(user_name,group_name):
+	if not user_db_exists(USER_DB):
+		# The database file is missing, or USER_DB isn't set properly. Throw up an error message and go back. 
+		Messager.error("User database not found--contact your administrator")
+		return None
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("INSERT INTO group_memberships(user_name, group_name) VALUES (?,?)", (user_name,group_name))
+		conn.commit()
+		conn.close()
+	except Error as e:
+		# See note in _is_authenticated about catching a generic Error.
+		Messager.error("Database error (user may already be in group)--contact your administrator")
+		return None
+
+def delete_user_from_group(user_name):
+	if not user_db_exists(USER_DB):
+		# The database file is missing, or USER_DB isn't set properly. Throw up an error message and go back. 
+		Messager.error("User database not found--contact your administrator")
+		return None		
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("DELETE FROM group_memberships WHERE user_name=?", [user_name])
+		conn.commit()
+		conn.close()
+		# TODO: Pass back a return code here so the caller knows it worked?
+	except Error as e:
+		# See note in _is_authenticated about catching a generic Error.
 		Messager.error("Database error--contact your administrator")
 
-	
+def add_doc_permission(doc_path, group_name, can_write):
+	# Bit of a difficulty here with can_write. First, an implementation detail...Python understands 
+	# boolean types, obviously, but SQLite doesn't--to it, false is 0 and true is 1. There'd have to be
+	# some mapping between types before we could store/retrieve the value. 
+	#
+	# Secondly, BRAT seems to expect everything that can be seen to be writeable. So, 
+	# TODO: Determine if that can be made more granular. 
+	if not user_db_exists(USER_DB):
+		# The database file is missing, or USER_DB isn't set properly. Throw up an error message and go back. 
+		Messager.error("User database not found--contact your administrator")
+		return None
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("INSERT INTO doc_permissions(doc_path, group_name, can_write) VALUES (?,?)", (user_name,group_name,can_write))
+		conn.commit()
+		conn.close()
+	except Error as e:
+		# See note in _is_authenticated about catching a generic Error.
+		Messager.error("Database error (permission may already be set)--contact your administrator")
+		return None
+
+#TODO: Add a second revocation method to revoke permissions for an entire document at once? 		
+def revoke_doc_permission(group_name):
+	if not user_db_exists(USER_DB):
+		# The database file is missing, or USER_DB isn't set properly. Throw up an error message and go back. 
+		Messager.error("User database not found--contact your administrator")
+		return None		
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("DELETE FROM doc_permissions WHERE group_name=?", [group_name])
+		conn.commit()
+		conn.close()
+		# TODO: Pass back a return code here so the caller knows it worked?
+	except Error as e:
+		# See note in _is_authenticated about catching a generic Error.
+		Messager.error("Database error--contact your administrator")
+		
 def whoami():
     json_dic = {}
     try:
@@ -223,11 +335,16 @@ def allowed_to_read(real_path):
         data_path = '%s/' % ( data_path )
         
     real_dir = dirname(real_path)
-	#TODO: Replace this with database lookup for permissions.  
+	#TODO: Replace this with database lookup, most likely in the doc_permissions table,
+	# to see if the user has permissions. Comment out this bit, then skip down to 
+	# after getting the username from the session info.
+	#
     robotparser = ProjectConfiguration(real_dir).get_access_control()
     if robotparser is None:
         return True # default allow
 
+	#TODO: NB to myself...here's where we grab the username. Should probably return False if the 
+	# system falls back to "guest", as it seems to do before a user logs in. 
     try:
         user = get_session().get('user')
     except KeyError:
@@ -236,8 +353,7 @@ def allowed_to_read(real_path):
     if user is None:
         user = 'guest'
 
-    #display_message('Path: %s, dir: %s, user: %s, ' % (data_path, real_dir, user), type='error', duration=-1)
-
-    return robotparser.can_fetch(user, data_path)
+    
+	return robotparser.can_fetch(user, data_path)
 
 # TODO: Unittesting
