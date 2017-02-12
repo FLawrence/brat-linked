@@ -93,6 +93,7 @@ else
     mkdir -p $data_dir_abs
 	
 	# Set up initial database here and create our first (admin) user from the above info.
+	# This assumes sqlite3 and Python are both installed, which is a safe-ish bet on a modern system.
 	sqlite3 $DATA_DIR/$USER_DB < db_setup.sql
 	python init_user_db.py $DATA_DIR/$USER_DB $user_name $password
 
