@@ -28,6 +28,11 @@ from common import ProtocolError
 from filelock import file_lock
 from message import Messager
 
+# NB: I originally thought I needed to leak session info into the Annotation class to enable 
+# grabbing user names so I could tag annotations with their owners. The bad news? 
+# It didn't quite work the way I wanted it to (See the note in Annotation). 
+# The good news? Now my objects won't get all leaky. --Tom
+# from session import get_session
 
 ### Constants
 # The only suffix we allow to write to, which is the joined annotation file
@@ -1123,7 +1128,14 @@ class Annotation(object):
     def __init__(self, tail, source_id=None):
         self.tail = tail
         self.source_id = source_id
-
+		# NB: Okay, setting the user ID here doesn't work--annotation objects get reconstructed from the 
+		# annotation files when they get parsed, which means when the constructor gets called,
+		# every single annotation gets tagged with the current user's ID, which leaves us 
+		# exactly where we were before. Need to figure out where the actual text gets written out 
+		# to the annotation files, then interrupt that and tag it on there. Conversely, strip it off
+		# from the text files and assign the owners accordingly when the files get parsed. --Tom
+		# self.user_id = get_session().get('user')
+		self.user_id = None
     def __str__(self):
         raise NotImplementedError
 
