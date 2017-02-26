@@ -4,12 +4,16 @@ user_name TEXT NOT NULL UNIQUE,
 password_hash TEXT NOT NULL,
 is_admin BOOLEAN NOT NULL);
 
-/* Might end up dropping this table in favor of an overall annotations one. 
-For now, it's not used. */
-CREATE TABLE files_annotated_by_users(
-user_id TEXT PRIMARY KEY NOT NULL,
+/* Do we need group IDs for this? 
+Also, do we need to set unique constraints for these? The client shouldn't allow the user 
+to try to set duplicate annotations--I think--but we might want to enforce that. */
+CREATE TABLE annotations(
+annotation_id INTEGER PRIMARY KEY,
+doc_path TEXT NOT NULL,
+doc_filename TEXT NOT NULL,
 user_name TEXT NOT NULL,
-file_name TEXT NOT NULL);
+text_annotation TEXT NOT NULL
+)
 
 CREATE TABLE groups(
 group_id INTEGER PRIMARY KEY,
@@ -47,3 +51,4 @@ group_name TEXT NOT NULL,
 can_write BOOLEAN NOT NULL,
 UNIQUE(doc_path, group_name)
 )
+
