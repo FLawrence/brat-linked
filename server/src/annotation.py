@@ -28,11 +28,8 @@ from common import ProtocolError
 from filelock import file_lock
 from message import Messager
 
-# NB: I originally thought I needed to leak session info into the Annotation class to enable 
-# grabbing user names so I could tag annotations with their owners. The bad news? 
-# It didn't quite work the way I wanted it to (See the note in Annotation). 
-# The good news? Now my objects won't get all leaky. --Tom
-# from session import get_session
+# Need this to grab the user ID so we can associate annotations with users. 
+from session import get_session
 
 ### Constants
 # The only suffix we allow to write to, which is the joined annotation file
@@ -857,6 +854,19 @@ class Annotations(object):
                 #for self.ann_line_num, self.ann_line in enumerate(self._file_input):
                 for self.ann_line in input_file:
                     self.ann_line_num += 1
+					# TODO: Okay, we're back to square...one and a half? Attaching the ID to the text annotations
+					# and reading them back in doesn't seem to work even if I have the other half (writing them back out
+					# with IDs attached) going. The files get mangled, BRAT throws up parse errors everywhere,
+					# and everything starts looking like a scene from a disaster movie. 
+					#
+					# Plan B: See that open_textfile call a few lines up from here? We've got to insert a database call to retrieve
+					# the annotation text that belongs to the current user from an annotations table, and then *somehow* do all of this processing
+					# below here to reconstruct annotation objects without making the rest of the system freak out...which means monkeying with that 
+					# "for self.ann_line in input_file" loop up there without causing the BRATpocalypse. 
+					#
+					# We'll need this later to grab stuff from the database. 
+					# user_id = get_session().get('user')
+
                     try:
                         # ID processing
                         try:
@@ -950,7 +960,12 @@ class Annotations(object):
             # should have is a modification flag in the object but we can't
             # due to how we change the annotations.
             
+			# TODO: Insert user ID here? This looks like it's where the annotations get written out t
+			# the current text file system, but it gets called a *lot*, including at times when I wouldn't
+			# have expected it. This *may* be the place to store the annotation text in the database table, but 
+			# it's going to need some more work. 
             out_str = unicode(self)
+
             with open_textfile(self._input_files[0], 'r') as old_ann_file:
                 old_str = old_ann_file.read()
 
@@ -1133,7 +1148,8 @@ class Annotation(object):
 		# every single annotation gets tagged with the current user's ID, which leaves us 
 		# exactly where we were before. Need to figure out where the actual text gets written out 
 		# to the annotation files, then interrupt that and tag it on there. Conversely, strip it off
-		# from the text files and assign the owners accordingly when the files get parsed. --Tom
+		# from the text files and assign the owners accordingly when the files get parsed. 
+		# Leaving this user_id here as a placeholder for now until I figure this out. --Tom
 		# self.user_id = get_session().get('user')
 		self.user_id = None
     def __str__(self):
