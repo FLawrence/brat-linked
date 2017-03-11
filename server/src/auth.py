@@ -142,7 +142,10 @@ def add_user(user_name,is_admin):
 		return None
 
 	# Generate a unique ID and a new random password for this user. We'll be returning the random password 
-	# to the admin user (who should be the only person calling this function) later. 
+	# to the admin user (who should be the only person calling this function) later.
+	# NB: Do we really need this unique ID? SQLite will generate ID integers if you configure a column as
+	# INTEGER PRIMARY KEY. Can we use that, or is there a danger of reuse if/when users get deleted? 
+	# probably not, but check. 
 	# NB: Just setting it to an arbitrary length of 15 right now. We can also add punctuation into the mix later if 
 	# this doesn't feel secure enough. 
 	user_id = uuid1().hex
@@ -334,11 +337,11 @@ def allowed_to_read(real_path):
     if isdir(real_path):
         data_path = '%s/' % ( data_path )
         
-    real_dir = dirname(real_path)
 	#TODO: Replace this with database lookup, most likely in the doc_permissions table,
 	# to see if the user has permissions. Comment out this bit, then skip down to 
 	# after getting the username from the session info.
 	#
+    real_dir = dirname(real_path)	
     robotparser = ProjectConfiguration(real_dir).get_access_control()
     if robotparser is None:
         return True # default allow
