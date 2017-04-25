@@ -17,6 +17,9 @@ from sqlite3 import connect
 import string
 import random
 
+# Temporarily importing this for debug purposes...
+import sys
+
 try:
     from os.path import relpath
 except ImportError:
@@ -242,6 +245,7 @@ def delete_group(group_name):
 		curs = conn.cursor()
 		curs.execute("DELETE FROM groups WHERE group_name=?", [group_name])
 		# Need to delete any of the associated group memberships and permissions.
+		# Look at adding a trigger to the database to handle this for us instead to neaten things a little. 
 		curs.execute("DELETE FROM group_memberships WHERE group_name=?", [group_name])
 		curs.execute("DELETE FROM doc_permissions WHERE group_name=?", [group_name])
 		conn.commit()
@@ -331,23 +335,19 @@ def whoami():
         Messager.error('Not logged in!', duration=3)
     return json_dic
 
-def allowed_to_read(real_path):
-    data_path = path_join('/', relpath(real_path, DATA_DIR))
-    # add trailing slash to directories, required to comply to robots.txt
-    if isdir(real_path):
-        data_path = '%s/' % ( data_path )
-        
-	#TODO: Replace this with database lookup, most likely in the doc_permissions table,
-	# to see if the user has permissions. Comment out this bit, then skip down to 
-	# after getting the username from the session info.
-	#
-    real_dir = dirname(real_path)	
-    robotparser = ProjectConfiguration(real_dir).get_access_control()
-    if robotparser is None:
-        return True # default allow
 
-	#TODO: NB to myself...here's where we grab the username. Should probably return False if the 
-	# system falls back to "guest", as it seems to do before a user logs in. 
+def allowed_to_read(real_path):
+	#NB for later: should only store relative paths in the permissions database--if full paths get stored
+	# and the data directory gets changed later, we're looking at messy manual database updates to fix it.
+	# Also, do we strictly technically need this join here if we're going for relative paths under DATA_DIR?
+	# It looks like we only need the full path if we're going with the old robots.txt-style permissions system.
+    data_path = path_join('/', relpath(real_path, DATA_DIR))
+	sys.stderr.write("Checking permissions for " + real_path)
+
+
+	#TODO: Should we short-circuit and return false here if the user isn't found, or go ahead 
+	# and handle it in the database lookup (where we won't/shouldn't find "guest") just to keep things 
+	# tidy and minimize our return points? Leaving it the way it is just for now...
     try:
         user = get_session().get('user')
     except KeyError:
@@ -356,7 +356,40 @@ def allowed_to_read(real_path):
     if user is None:
         user = 'guest'
 
-    
-	return robotparser.can_fetch(user, data_path)
+    # DEBUG
+	sys.stderr.write("User name is: " + user)
+	# Database lookup here! We've got the user and the path. Find the group(s) the user is in and
+	# whether any of them can access the directory we're looking at. 
+	# 1.) Make sure the DB exists and is reachable. If not, error out.
+	# 2.) Get user (which we've done above).
+	# 3.) Get group(s) for that user. 
+	# 4.) Get group(s)for the directory passed in to us.
+	# 5.) If everything matches up, return true; otherwise, return false. 
+	# 6.) Profit!
+	if not user_db_exists(USER_DB):
+		# The database file is missing, or USER_DB isn't set properly. Throw up an error message and go back. 
+		Messager.error("Database missing or unreachable--contact your administrator")
+		return False		
 
+	# Get the groups that our user belongs to, then the groups that have permission for this directory.
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("SELECT group_name FROM group_memberships WHERE user_name=?", [user])
+		user_groups = list(curs.fetchall())
+		curs.execute("SELECT group_name FROM doc_permissions WHERE doc_path=?", [real_path])
+		doc_groups = list(curs.fetchall())
+		conn.close()
+		
+		# Check to see if our user's group membership(s) is a match with the group(s) in the permissions database.
+		# Nice little boolean one-liner here...
+		return any(group in doc_groups for group in user_groups)
+
+	except Exception as e:
+		# See note in _is_authenticated about catching a generic Error.
+		Messager.error("Database error--contact your administrator")
+		sys.stderr.write(e.message)
+		return False
+		
+		
 # TODO: Unittesting

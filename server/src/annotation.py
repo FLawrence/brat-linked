@@ -1001,6 +1001,8 @@ class Annotations(object):
                             #       files, but the client will already have the version
                             #       at this stage leading to potential problems upon
                             #       the next change to the file.
+							# TODO: Check this out_str to see if this is where we can
+							# grab the annotations. --Tom 25/4
                             tmp_file.write(out_str)
                             tmp_file.flush()
 
