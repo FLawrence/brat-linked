@@ -31,6 +31,9 @@ from message import Messager
 # Need this to grab the user ID so we can associate annotations with users. 
 from session import get_session
 
+# Temporarily importing this for debug purposes...
+import sys
+
 ### Constants
 # The only suffix we allow to write to, which is the joined annotation file
 JOINED_ANN_FILE_SUFF = 'ann'
@@ -493,6 +496,11 @@ class Annotations(object):
     # TODO: getters for other categories of annotations
     #TODO: Remove read and use an internal and external version instead
     def add_annotation(self, ann, read=False):
+		# NB: Trying to get just the new annotations from here doesn't work either. 
+		# This gets called when the document's opened, when new annotations get created,
+		# and (apparently) when annotations are deleted--it looks like it rewrites the entire
+		# annotations file on any change, which is...less than ideal. --Tom 12/5/17
+		#
         #log_info(u'Will add: ' + unicode(ann).rstrip('\n') + ' ' + unicode(type(ann)))
         #TODO: DOC!
         #TODO: Check read only
@@ -1002,7 +1010,15 @@ class Annotations(object):
                             #       at this stage leading to potential problems upon
                             #       the next change to the file.
 							# TODO: Check this out_str to see if this is where we can
-							# grab the annotations. --Tom 25/4
+							# grab the annotations. --Tom 25/4/17
+							#
+							# Looks like it's writing out the entire file here. Can't just 
+							# grab the last annotation, either, since this also gets called 
+							# when *deleting* an annotation. Need to see where the actual 
+							# annotation string is being built. --Tom 12/5/17
+							#
+							# DEBUG
+							#sys.stderr.write("In annotation.__exit__()...out_str is: " + out_str)
                             tmp_file.write(out_str)
                             tmp_file.flush()
 

@@ -17,6 +17,9 @@ from os.path import join as path_join
 from os.path import split as path_split
 from re import compile as re_compile
 
+# Temporarily importing this for debug purposes...
+import sys
+
 from annotation import (OnelineCommentAnnotation, TEXT_FILE_SUFFIX,
         TextAnnotations, DependingAnnotationDeleteError, TextBoundAnnotation,
         EventAnnotation, EquivAnnotation, open_textfile,
@@ -373,6 +376,8 @@ def __create_span(ann_obj, mods, type, offsets, txt_file_path,
         # We got a newline in the span, don't take any action
         event = None
 
+	#DEBUG
+	sys.stderr.write("In annotator.__create_span(). Adding: " + ann.__str__())
     return ann, event
 
 def _set_attributes(ann_obj, ann, attributes, mods, undo_resp={}):
