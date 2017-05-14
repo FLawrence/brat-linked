@@ -571,12 +571,17 @@ class Annotations(object):
         #TODO: needed to pass tracker to track recursive mods, but use is too
         #      invasive (direct modification of ModificationTracker.deleted)
         #TODO: DOC!
+		#
+		#DEBUG
+		sys.stderr.write("In annotation.del_annotation().\n")
         if self._read_only:
             raise AnnotationsIsReadOnlyError(self.get_document())
 
         try:
             ann.id
         except AttributeError:
+			#DEBUG
+			sys.stderr.write("Calling annotation._atomic_del_annotation().\n")
             # If it doesn't have an id, nothing can depend on it
             if tracker is not None:
                 tracker.deletion(ann)
@@ -608,6 +613,8 @@ class Annotations(object):
             ))):
 
             for d in ann_deps:
+				#DEBUG
+				sys.stderr.write("Deleting dependent annotations. Current annotation is: " + d.__str__() + "\n")
                 if isinstance(d, AttributeAnnotation):
                     if tracker is not None:
                         tracker.deletion(d)
@@ -646,6 +653,8 @@ class Annotations(object):
 
         if tracker is not None:
             tracker.deletion(ann)
+		#DEBUG
+		sys.stderr.write("Deleting annotation: " +ann.__str__() + "\n")
         self._atomic_del_annotation(ann)
 
     def _atomic_del_annotation(self, ann):

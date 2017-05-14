@@ -377,7 +377,7 @@ def __create_span(ann_obj, mods, type, offsets, txt_file_path,
         event = None
 
 	#DEBUG
-	sys.stderr.write("In annotator.__create_span(). Adding: " + ann.__str__())
+	sys.stderr.write("In annotator.__create_span(). Adding: " + ann.__str__() + "\n")
     return ann, event
 
 def _set_attributes(ann_obj, ann, attributes, mods, undo_resp={}):
@@ -577,6 +577,8 @@ def _set_comments(ann_obj, ann, comment, mods, undo_resp={}):
                     u'AnnotatorNotes', u'\t' + comment)
             ann_obj.add_annotation(new_comment)
             mods.addition(new_comment)
+			#DEBUG
+			sys.stderr.write("In annotator._set_comments()...creating new note: " + new_comment.__str__() + "\n")
     else:
         # We are to erase the annotation
         if found is not None:
@@ -915,6 +917,8 @@ def create_arc(collection, document, origin, target, type, attributes=None,
 
         # process comments
         if ann is not None:
+			#DEBUG
+			sys.stderr.write("In annotator.create_arc(). Adding annotation: " + ann.__str__() + "\n")
             _set_comments(ann_obj, ann, comment, mods,
                           undo_resp=undo_resp)
         elif comment is not None:
