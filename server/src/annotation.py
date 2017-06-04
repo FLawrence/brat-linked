@@ -31,6 +31,10 @@ from message import Messager
 # Need this to grab the user ID so we can associate annotations with users. 
 from session import get_session
 
+# And here's how we begin migrating away from text files for annotation storage.
+# We'll need this for reading/deleting annotations from the database. 
+from sqlite3 import connect
+
 # Temporarily importing this for debug purposes...
 import sys
 
@@ -880,6 +884,10 @@ class Annotations(object):
 					# the annotation text that belongs to the current user from an annotations table, and then *somehow* do all of this processing
 					# below here to reconstruct annotation objects without making the rest of the system freak out...which means monkeying with that 
 					# "for self.ann_line in input_file" loop up there without causing the BRATpocalypse. 
+					#
+					# Looks like the best place to interrupt would be right above the "for input_file_path" bit--pull the 
+					# annotations out of the table, then trick BRAT into reading the lines from that query instead of from 
+					# the text file(s). Is this the only place it tries to read, though? --Tom 4/6/17
 					#
 					# We'll need this later to grab stuff from the database. 
 					# user_id = get_session().get('user')

@@ -20,6 +20,13 @@ from re import compile as re_compile
 # Temporarily importing this for debug purposes...
 import sys
 
+# We'll need this for storing the annotations in a table instead of text files.
+from sqlite3 import connect
+from config import USER_DB
+
+# Need this to grab the user ID so we can associate annotations with users. 
+from session import get_session
+
 from annotation import (OnelineCommentAnnotation, TEXT_FILE_SUFFIX,
         TextAnnotations, DependingAnnotationDeleteError, TextBoundAnnotation,
         EventAnnotation, EquivAnnotation, open_textfile,
@@ -112,6 +119,27 @@ class ModificationTracker(object):
 
         return response
 
+		
+# First crack at a function for inserting annotations into the database. 
+def _store_annotation(txt_file_path,annotation_text):
+	# Get the username from the session so we can associate it with the annotation.
+	user_name = get_session().get('user')
+	
+	# Split the textfile path into path + file name. We might not need them, but they could be handy later.
+	path, filename = path_split(txt_file_path)
+	try:
+		conn = connect(USER_DB)
+		curs = conn.cursor()
+		curs.execute("INSERT INTO annotations(doc_path,doc_filename,user_name,annotation_text) VALUES (?,?,?,?)", (path,filename,user_name,annotation_text))
+		conn.commit()
+		conn.close()
+		# Our annotation should now be in the table. 
+	except Error as e:
+		# See note in auth._is_authenticated about catching a generic Error.
+		Messager.error("Database error--contact your administrator")
+		return None
+	
+	
 # TODO: revive the "unconfirmed annotation" functionality;
 # the following currently unused bit may help
 # def confirm_span(docdir, docname, span_id):
@@ -378,6 +406,8 @@ def __create_span(ann_obj, mods, type, offsets, txt_file_path,
 
 	#DEBUG
 	sys.stderr.write("In annotator.__create_span(). Adding: " + ann.__str__() + "\n")
+	# TEST: Adding our annotation to the database. 
+	_store_annotation(txt_file_path,ann.__str__())
     return ann, event
 
 def _set_attributes(ann_obj, ann, attributes, mods, undo_resp={}):
